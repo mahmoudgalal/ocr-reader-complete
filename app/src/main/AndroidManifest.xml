@@ -6,6 +6,8 @@
     <uses-feature android:name="android.hardware.camera" />
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -14,6 +16,7 @@
         android:icon="@drawable/icon"
         android:label="Modeso Scanner module"
         android:supportsRtl = "true"
+        android:name=".App"
         android:theme="@style/Theme.AppCompat" >
         <meta-data
             android:name="com.google.android.gms.version"
@@ -22,13 +25,24 @@
             android:name="com.google.android.gms.vision.DEPENDENCIES"
             android:value="ocr" />
 
-        <activity android:name="com.google.android.gms.samples.vision.ocrreader.OcrCaptureActivity"
+        <activity android:name="com.google.android.gms.samples.vision.ocrreader.ui.OcrCaptureActivity"
+            android:label="Modeso Scanner module">
+            <!--<intent-filter>-->
+                <!--<action android:name="android.intent.action.MAIN" />-->
+                <!--<category android:name="android.intent.category.LAUNCHER" />-->
+            <!--</intent-filter>-->
+        </activity>
+
+        <activity
+            android:name="com.google.android.gms.samples.vision.ocrreader.ui.MainActivity"
             android:label="Modeso Scanner module">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".ui.customcamera.CameraActivity" />
     </application>
 
 </manifest>
