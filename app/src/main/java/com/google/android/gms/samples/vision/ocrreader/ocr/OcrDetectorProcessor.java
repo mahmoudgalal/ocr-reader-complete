@@ -39,7 +39,7 @@ public class OcrDetectorProcessor implements Detector.Processor<TextBlock> {
 
     private GraphicOverlay<OcrGraphic> mGraphicOverlay;
     private View windowView;
-
+    SparseArray<TextBlock> items;
     public OnAlignedTextPrepared onAlignedTextPreparedListener;
     private static final String TAG = OcrDetectorProcessor.class.getSimpleName();
     public OcrDetectorProcessor(GraphicOverlay<OcrGraphic> ocrGraphicOverlay,View windowView) {
@@ -57,7 +57,7 @@ public class OcrDetectorProcessor implements Detector.Processor<TextBlock> {
     @Override
     public void receiveDetections(Detector.Detections<TextBlock> detections) {
         mGraphicOverlay.clear();
-        SparseArray<TextBlock> items = detections.getDetectedItems();
+        items = detections.getDetectedItems();
         //detections.getFrameMetadata().
         List<TextBlock> textBlocksList = new ArrayList<>();
 
@@ -153,5 +153,19 @@ public class OcrDetectorProcessor implements Detector.Processor<TextBlock> {
     public void setOnAlignedTextPreparedListener(OnAlignedTextPrepared onAlignedTextPreparedListener) {
         this.onAlignedTextPreparedListener = onAlignedTextPreparedListener;
     }
+
+    public String getTotalFromSparseArray(String s){
+
+        String search  = "total";
+
+        if ( s.toLowerCase().indexOf(search.toLowerCase()) != -1 ) {
+            System.out.println("I found the keyword");
+        } else {
+            System.out.println("not found");
+        }
+
+        return "";
+    }
+
 
 }

@@ -62,7 +62,11 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import com.google.android.gms.samples.vision.ocrreader.R;
+import com.google.android.gms.samples.vision.ocrreader.model.Receipt;
+import com.google.android.gms.samples.vision.ocrreader.model.Receipt_Table;
 import com.google.android.gms.samples.vision.ocrreader.ui.OcrCaptureActivity;
+import com.raizlabs.android.dbflow.sql.language.Method;
+import com.raizlabs.android.dbflow.sql.language.SQLite;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -75,6 +79,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -403,7 +408,7 @@ public class Camera2BasicFragment extends Fragment
             if (option.getWidth() <= maxWidth && option.getHeight() <= maxHeight &&
                     option.getHeight() == option.getWidth() * h / w) {
                 if (option.getWidth() >= textureViewWidth &&
-                    option.getHeight() >= textureViewHeight) {
+                        option.getHeight() >= textureViewHeight) {
                     bigEnough.add(option);
                 } else {
                     notBigEnough.add(option);
@@ -444,7 +449,7 @@ public class Camera2BasicFragment extends Fragment
         super.onActivityCreated(savedInstanceState);
 
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "JPEG_" + timeStamp + "_";
+        String imageFileName = "JPEG_" + timeStamp + "_.jpg";
         File storageDir = getActivity().getExternalFilesDir(Environment.DIRECTORY_PICTURES);
         mFile = new File(getActivity().getExternalFilesDir(Environment.DIRECTORY_PICTURES), imageFileName);
         mCurrentPhotoPath = mFile.getAbsolutePath();
@@ -851,15 +856,36 @@ public class Camera2BasicFragment extends Fragment
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session,
                                                @NonNull CaptureRequest request,
                                                @NonNull TotalCaptureResult result) {
-                    showToast("Saved: " + mFile);
-                    showToast("Saved: " + mCurrentPhotoPath);
-                    Log.d(TAG, mFile.toString());
+                    /*
+                    ** start **
+                    this part to create record of receipt in database
+                     */
+                    Receipt mReceipt = new Receipt();
+                    mReceipt.setImageUrl(mCurrentPhotoPath);
+                    String serialId = UUID.randomUUID().toString();
+                    mReceipt.setUUID(serialId);
+                    mReceipt.save();
 
+                    Receipt receipt = SQLite.select()
+                            .from(Receipt.class)
+                            .where(Receipt_Table.UUID.eq(serialId))
+                            .querySingle();
+
+                    Log.d(TAG,receipt.getImageUrl());
+                    /*
+                     ** end **
+                     */
+
+
+                    Log.d(TAG, mFile.toString());
+//                  closeCamera();
+                    mCameraDevice.close();
                     Intent intent = new Intent(getActivity(), OcrCaptureActivity.class);
+                    intent.putExtra("uuid",serialId);
                     getContext().startActivity(intent);
                     getActivity().finish();
 
-                    unlockFocus();
+//                    unlockFocus();
                 }
             };
 
@@ -967,28 +993,6 @@ public class Camera2BasicFragment extends Fragment
 
     }
 
-    /**
-     * used to save image file and return uri to be saved in database
-     * @return
-     * @throws IOException
-     */
-
-    private File createImageFile() throws IOException {
-        // Create an image file name
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "JPEG_" + timeStamp + "_";
-        File storageDir = getActivity().getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-        File image = File.createTempFile(
-                imageFileName,  /* prefix */
-                ".jpg",         /* suffix */
-                storageDir      /* directory */
-        );
-
-        // Save a file: path for use with ACTION_VIEW intents
-        mCurrentPhotoPath = image.getAbsolutePath();
-        Log.d("Image Path :", mCurrentPhotoPath);
-        return image;
-    }
 
     /**
      * Compares two {@code Size}s based on their areas.

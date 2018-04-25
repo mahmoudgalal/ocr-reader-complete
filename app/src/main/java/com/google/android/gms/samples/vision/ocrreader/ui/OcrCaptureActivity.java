@@ -37,6 +37,7 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -87,6 +88,9 @@ public final class OcrCaptureActivity extends AppCompatActivity implements OcrDe
     private TextToSpeech tts;
     private TextView windowView;
 
+    private EditText ed_total;
+    Context context;
+
     /**
      * Initializes the UI and creates the detector pipeline.
      */
@@ -94,6 +98,7 @@ public final class OcrCaptureActivity extends AppCompatActivity implements OcrDe
     public void onCreate(Bundle bundle) {
         super.onCreate(bundle);
         setContentView(R.layout.ocr_capture);
+        context = this;
         windowView  = (TextView) findViewById(R.id.window_view);
 
         mPreview = (CameraSourcePreview) findViewById(R.id.preview);
@@ -357,7 +362,32 @@ public final class OcrCaptureActivity extends AppCompatActivity implements OcrDe
             if (text != null && text.getValue() != null) {
                 Log.d(TAG, "text data is being spoken! " + text.getValue());
                 // Speak the string.
-                tts.speak(text.getValue(), TextToSpeech.QUEUE_ADD, null, "DEFAULT");
+//                tts.speak(text.getValue(), TextToSpeech.QUEUE_ADD, null, "DEFAULT");
+                String result = text.getValue().replaceAll("([A-Za-z])\\w+" ,"");
+                AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                builder.setTitle("Total Amount");
+                builder.setMessage("Please Confirm Total Amount");
+
+                ed_total = new EditText(context);
+                ed_total.setText(result);
+                builder.setView(ed_total);
+                builder.setPositiveButton("ok", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Toast.makeText(context, ed_total.getText().toString(), Toast.LENGTH_SHORT).show();
+                        finish();
+                    }
+                });
+
+                builder.setNegativeButton("cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+
+                AlertDialog alertDialog = builder.create();
+                alertDialog.show();
             }
             else {
                 Log.d(TAG, "text data is null");

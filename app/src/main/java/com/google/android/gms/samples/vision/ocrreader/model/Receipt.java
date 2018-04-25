@@ -17,6 +17,9 @@ public class Receipt extends BaseModel {
     private String imageUrl;
     @Column
     private int totalAmount;
+    @Column
+    private int serverId;
+
 
     /*
         start of getter method
@@ -32,6 +35,10 @@ public class Receipt extends BaseModel {
 
     public int getTotalAmount() {
         return totalAmount;
+    }
+
+    public int getServerId() {
+        return serverId;
     }
 
     /*
@@ -50,4 +57,7 @@ public class Receipt extends BaseModel {
         this.totalAmount = totalAmount;
     }
 
+    public void setServerId(int serverId) {
+        this.serverId = serverId;
+    }
 }
