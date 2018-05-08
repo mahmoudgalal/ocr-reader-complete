@@ -25,7 +25,7 @@ public class AppRetrofitManager {
                     OkHttpClient okHttpClient = new OkHttpClient.Builder()
                             .build();
                     mRetrofit = new Retrofit.Builder()
-                            .baseUrl("") // url here
+                            .baseUrl("http://192.168.1.4:9000/api/") // url here
                             .addConverterFactory(GsonConverterFactory.create(new Gson()))
                             .client(okHttpClient)
                             .build();

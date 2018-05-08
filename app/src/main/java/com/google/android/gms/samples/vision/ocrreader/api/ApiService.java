@@ -1,5 +1,7 @@
 package com.google.android.gms.samples.vision.ocrreader.api;
 
+import com.google.android.gms.samples.vision.ocrreader.model.UploadResponse;
+
 import okhttp3.MultipartBody;
 import retrofit2.Call;
 import retrofit2.http.Field;
@@ -10,9 +12,9 @@ import retrofit2.http.Part;
 
 public interface ApiService {
 
-    @POST("")
+    @POST("upload/")
     @Multipart
-    Call<String> uploadImage(@Part MultipartBody.Part image);
+    Call<UploadResponse> uploadImage(@Part MultipartBody.Part image);
 
     @POST
     @FormUrlEncoded

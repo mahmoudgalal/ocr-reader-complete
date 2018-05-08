@@ -1,12 +1,16 @@
 package com.google.android.gms.samples.vision.ocrreader.ui;
 
 import android.Manifest;
+import android.app.ActivityManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.databinding.DataBindingUtil;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -14,6 +18,7 @@ import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
 import android.support.v7.app.AppCompatActivity;
+
 import com.birbit.android.jobqueue.JobManager;
 import com.google.android.gms.samples.vision.ocrreader.R;
 import com.google.android.gms.samples.vision.ocrreader.databinding.ActivityMainBinding;
@@ -26,7 +31,13 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+
+import br.com.simplepass.loading_button_lib.Utils;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -35,6 +46,10 @@ public class MainActivity extends AppCompatActivity {
     public static final int REQUEST_WRITE_EXTERNAL_STORAGE = 2;
     public static final int REQUEST_READ_EXTERNAL_STORAGE = 3;
     String mCurrentPhotoPath;
+
+    private Timer mTimer1;
+    private TimerTask mTt1;
+    private Handler mTimerHandler = new Handler();
 
     Intent intent;
     ActivityMainBinding binding;
@@ -46,14 +61,14 @@ public class MainActivity extends AppCompatActivity {
 
         binding.setHandler(new EventHandler() {
             @Override
-            public void onAddReceipt(){
+            public void onAddReceipt() {
                 Intent intent = new Intent(MainActivity.this, CameraActivity.class);
                 startActivity(intent);
             }
 
             @Override
             public void onSync() {
-                Log.d("sync" , "Clicked");
+                Log.d("sync", "Clicked");
 //                binding.btnId.startAnimation();
 //                binding.btnId.stopAnimation();
             }
@@ -64,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
      *
      */
     public void enableRuntimePermission() {
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED){
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
                     Manifest.permission.CAMERA)) {
 
@@ -72,12 +87,12 @@ public class MainActivity extends AppCompatActivity {
                 ActivityCompat.requestPermissions(MainActivity.this, new String[]{
                         Manifest.permission.CAMERA}, REQUEST_IMAGE_CAPTURE);
             }
-        }else{
+        } else {
             dispatchTakePictureIntent();
         }
 
 
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
 
@@ -88,7 +103,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
                     Manifest.permission.READ_EXTERNAL_STORAGE)) {
 
@@ -105,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
             case REQUEST_IMAGE_CAPTURE:
             case REQUEST_READ_EXTERNAL_STORAGE:
             case REQUEST_WRITE_EXTERNAL_STORAGE:
-                Log.d("request permission" , " done");
+                Log.d("request permission", " done");
                 if (PResult.length > 0 && PResult[0] == PackageManager.PERMISSION_GRANTED) {
                     dispatchTakePictureIntent();
                     Toast.makeText(MainActivity.this, "Permission Granted, Now your application can access CAMERA.", Toast.LENGTH_LONG).show();
@@ -123,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             String serialId = UUID.randomUUID().toString();
             JobManager ref = AppJobManager.getJobManager();
-            ref.addJobInBackground(new ImageJobs("",serialId));
+            ref.addJobInBackground(new ImageJobs("", serialId));
             Log.d("ActivityResult", "done");
         }
     }
@@ -164,6 +179,31 @@ public class MainActivity extends AppCompatActivity {
         mCurrentPhotoPath = image.getAbsolutePath();
         Log.d("Image Path :", mCurrentPhotoPath);
         return image;
+    }
+
+
+    class ForegroundCheckTask extends AsyncTask<Context, Void, Boolean> {
+
+        @Override
+        protected Boolean doInBackground(Context... params) {
+            final Context context = params[0].getApplicationContext();
+            return isAppOnForeground(context);
+        }
+
+        private boolean isAppOnForeground(Context context) {
+            ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+            List<ActivityManager.RunningAppProcessInfo> appProcesses = activityManager.getRunningAppProcesses();
+            if (appProcesses == null) {
+                return false;
+            }
+            final String packageName = context.getPackageName();
+            for (ActivityManager.RunningAppProcessInfo appProcess : appProcesses) {
+                if (appProcess.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND && appProcess.processName.equals(packageName)) {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 }
 

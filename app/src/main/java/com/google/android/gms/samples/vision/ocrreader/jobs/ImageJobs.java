@@ -7,10 +7,19 @@ import android.util.Log;
 import com.birbit.android.jobqueue.Job;
 import com.birbit.android.jobqueue.Params;
 import com.birbit.android.jobqueue.RetryConstraint;
+import com.google.android.gms.samples.vision.ocrreader.api.ApiService;
+import com.google.android.gms.samples.vision.ocrreader.api.AppRetrofitManager;
 import com.google.android.gms.samples.vision.ocrreader.data.ReceiptRepository;
 import com.google.android.gms.samples.vision.ocrreader.exception.ErrorRequestException;
 import com.google.android.gms.samples.vision.ocrreader.model.Receipt;
 import com.google.android.gms.samples.vision.ocrreader.utils.Constants;
+
+import java.io.File;
+
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
+import retrofit2.Call;
 
 
 public class ImageJobs extends Job {
@@ -41,7 +50,7 @@ public class ImageJobs extends Job {
         // TODO: 4/18/2018 getimageUrl from dataBase
         // TODO: 4/18/2018 making call to upload it
         Log.d(TAG , "onRun");
-        /*
+
         ApiService mApiService = AppRetrofitManager.getApiService();
 
         // this part to create image file from imageUrl
@@ -50,9 +59,9 @@ public class ImageJobs extends Job {
         MultipartBody.Part fileToUpload = MultipartBody.Part.createFormData("image", imageFile.getName(), requestBody);
 
         // make calling of upload
-        Call<String> request = mApiService.uploadImage(fileToUpload);
-        String result = AppRetrofitManager.performRequest(request); // it should return serverId to me 
-        */
+//        Call<String> request = mApiService.uploadImage(fileToUpload);
+//        String result = AppRetrofitManager.performRequest(request); // it should return serverId to me
+
         // TODO: 4/18/2018 add serverId to database
         Receipt receipt = new Receipt();
         receipt.setImageUrl("");

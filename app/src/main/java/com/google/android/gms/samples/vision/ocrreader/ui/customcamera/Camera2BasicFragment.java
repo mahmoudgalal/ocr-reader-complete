@@ -62,8 +62,12 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import com.google.android.gms.samples.vision.ocrreader.R;
+import com.google.android.gms.samples.vision.ocrreader.api.ApiService;
+import com.google.android.gms.samples.vision.ocrreader.api.AppRetrofitManager;
+import com.google.android.gms.samples.vision.ocrreader.exception.ErrorRequestException;
 import com.google.android.gms.samples.vision.ocrreader.model.Receipt;
 import com.google.android.gms.samples.vision.ocrreader.model.Receipt_Table;
+import com.google.android.gms.samples.vision.ocrreader.model.UploadResponse;
 import com.google.android.gms.samples.vision.ocrreader.ui.OcrCaptureActivity;
 import com.raizlabs.android.dbflow.sql.language.Method;
 import com.raizlabs.android.dbflow.sql.language.SQLite;
@@ -82,6 +86,11 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
+import retrofit2.Call;
 
 public class Camera2BasicFragment extends Fragment
         implements View.OnClickListener, ActivityCompat.OnRequestPermissionsResultCallback {
@@ -860,6 +869,25 @@ public class Camera2BasicFragment extends Fragment
                     ** start **
                     this part to create record of receipt in database
                      */
+//start upload
+                    ApiService mApiService = AppRetrofitManager.getApiService();
+
+                    // this part to create image file from imageUrl
+                    File imageFile = new File(mCurrentPhotoPath);
+                    RequestBody requestBody = RequestBody.create(MediaType.parse("multipart/form-data"), imageFile);
+                    MultipartBody.Part fileToUpload = MultipartBody.Part.createFormData("file", imageFile.getName(), requestBody);
+
+                    // make calling of upload
+                    Call<UploadResponse> request2 = mApiService.uploadImage(fileToUpload);
+                    try {
+                        UploadResponse result2 = AppRetrofitManager.performRequest(request2);
+                        System.out.println(result2.getImageUrl());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (ErrorRequestException e) {
+                        e.printStackTrace();
+                    }
+
                     Receipt mReceipt = new Receipt();
                     mReceipt.setImageUrl(mCurrentPhotoPath);
                     String serialId = UUID.randomUUID().toString();
