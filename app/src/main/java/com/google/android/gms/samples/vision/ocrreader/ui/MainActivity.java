@@ -6,6 +6,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.databinding.DataBindingUtil;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -16,6 +18,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 
 import android.util.Log;
+import android.util.SparseArray;
 import android.widget.Toast;
 import android.support.v7.app.AppCompatActivity;
 
@@ -25,13 +28,22 @@ import com.google.android.gms.samples.vision.ocrreader.databinding.ActivityMainB
 import com.google.android.gms.samples.vision.ocrreader.events.EventHandler;
 import com.google.android.gms.samples.vision.ocrreader.jobs.ImageJobs;
 import com.google.android.gms.samples.vision.ocrreader.manager.AppJobManager;
+import com.google.android.gms.samples.vision.ocrreader.ocr.OcrDetectorProcessor;
 import com.google.android.gms.samples.vision.ocrreader.ui.customcamera.CameraActivity;
+import com.google.android.gms.vision.Frame;
+import com.google.android.gms.vision.text.TextBlock;
+import com.google.android.gms.vision.text.TextRecognizer;
 
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
@@ -41,10 +53,11 @@ import br.com.simplepass.loading_button_lib.Utils;
 
 public class MainActivity extends AppCompatActivity {
 
-
+    public OcrDetectorProcessor.OnAlignedTextPrepared onAlignedTextPreparedListener;
     public static final int REQUEST_IMAGE_CAPTURE = 1;
     public static final int REQUEST_WRITE_EXTERNAL_STORAGE = 2;
     public static final int REQUEST_READ_EXTERNAL_STORAGE = 3;
+    private static final String TAG = MainActivity.class.getName();
     String mCurrentPhotoPath;
 
     private Timer mTimer1;
@@ -71,6 +84,28 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("sync", "Clicked");
 //                binding.btnId.startAnimation();
 //                binding.btnId.stopAnimation();
+
+                Bitmap photo = BitmapFactory.decodeResource(getResources(), R.drawable.simple);
+
+                Context context = getApplicationContext();
+                TextRecognizer ocrFrame = new TextRecognizer.Builder(context).build();
+                Frame frame = new Frame.Builder().setBitmap(photo).build();
+                if (ocrFrame.isOperational()) {
+                    Log.e(TAG, "Textrecognizer is operational");
+                }
+                SparseArray<TextBlock> textBlocks = ocrFrame.detect(frame);
+                List<TextBlock> textBlockList = new ArrayList<>();
+                for(int i = 0; i< textBlocks.size() ; i++){
+                    textBlockList.add(textBlocks.get(i));
+                }
+
+                for (int i = 0; i < textBlocks.size(); i++) {
+                    TextBlock textBlock = textBlocks.get(textBlocks.keyAt(i));
+
+//                    Log.d(TAG, "onSync: "+ textBlock.getValue());
+//                    Log.e(TAG, "something is happening");
+                    System.out.println(i+"                        "+textBlock.getValue());
+                }
             }
         });
     }
@@ -204,6 +239,63 @@ public class MainActivity extends AppCompatActivity {
             }
             return false;
         }
+    }
+
+
+    private void logAlignedBlocks(List<TextBlock> items) {
+        Log.d(TAG, "logAlignedBlocks: *************************************");
+        if (items.isEmpty())
+            return;
+        Map<Long, List<String>> allBlocksAligned = new HashMap<>();
+        long id = 0;
+        List<TextBlock> sortedBlocks = items;
+        Collections.sort(sortedBlocks, new Comparator<TextBlock>() {
+            @Override
+            public int compare(TextBlock textBlock, TextBlock t1) {
+                return textBlock.getBoundingBox().left - t1.getBoundingBox().left;
+            }
+        });
+
+        for (int i = 0; i < sortedBlocks.size(); ++i) {
+            TextBlock item = sortedBlocks.get(i);
+            if (item == null)
+                continue;
+
+            for (int j = i + 1; j < sortedBlocks.size(); ++j) {
+                TextBlock innerItem = sortedBlocks.get(j);
+//                System.out.println(innerItem.getValue());
+                if (Math.abs(item.getBoundingBox().top - innerItem.getBoundingBox().top) < 8) {
+                    //we found almost aligned items
+                    id = item.getBoundingBox().top;//Identify by Y coordinate
+                    List<String> alignedItems = allBlocksAligned.get(id);
+                    if (alignedItems == null) {
+                        alignedItems = new ArrayList<>();
+                        allBlocksAligned.put(id, alignedItems);
+                        alignedItems.add(item.getValue());
+                    }
+                    if (!alignedItems.contains(innerItem.getValue()))
+                        alignedItems.add(innerItem.getValue());
+
+                    System.out.println("*****************");
+                    for(String s : alignedItems){
+                        System.out.print(s +" ");
+                    }
+                }
+            }
+
+        }
+        if (onAlignedTextPreparedListener != null)
+            onAlignedTextPreparedListener.onAlignedTextPrepared(allBlocksAligned);
+
+    }
+
+    public interface OnAlignedTextPrepared {
+        // Passes you a map where each item containing a list of all items on the same horizontal line.
+        void onAlignedTextPrepared(Map<Long, List<String>> allBlocksAligned);
+    }
+
+    public void setOnAlignedTextPreparedListener(OcrDetectorProcessor.OnAlignedTextPrepared onAlignedTextPreparedListener) {
+        this.onAlignedTextPreparedListener = onAlignedTextPreparedListener;
     }
 }
 
