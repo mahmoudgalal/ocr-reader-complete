@@ -1,7 +1,6 @@
 package com.google.android.gms.samples.vision.ocrreader.ui;
 
 import android.Manifest;
-import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -9,18 +8,16 @@ import android.databinding.DataBindingUtil;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.util.SparseArray;
 import android.widget.Toast;
-import android.support.v7.app.AppCompatActivity;
 
 import com.birbit.android.jobqueue.JobManager;
 import com.google.android.gms.samples.vision.ocrreader.R;
@@ -28,9 +25,9 @@ import com.google.android.gms.samples.vision.ocrreader.databinding.ActivityMainB
 import com.google.android.gms.samples.vision.ocrreader.events.EventHandler;
 import com.google.android.gms.samples.vision.ocrreader.jobs.ImageJobs;
 import com.google.android.gms.samples.vision.ocrreader.manager.AppJobManager;
-import com.google.android.gms.samples.vision.ocrreader.ocr.OcrDetectorProcessor;
 import com.google.android.gms.samples.vision.ocrreader.ui.customcamera.CameraActivity;
 import com.google.android.gms.vision.Frame;
+import com.google.android.gms.vision.text.Text;
 import com.google.android.gms.vision.text.TextBlock;
 import com.google.android.gms.vision.text.TextRecognizer;
 
@@ -42,19 +39,18 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.TreeMap;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 
-import br.com.simplepass.loading_button_lib.Utils;
+public class MainActivity extends AppCompatActivity implements OnAlignedTextPrepared {
 
-public class MainActivity extends AppCompatActivity
-        implements MainActivity.OnAlignedTextPrepared {
-
-    public OcrDetectorProcessor.OnAlignedTextPrepared onAlignedTextPreparedListener;
+    public OnAlignedTextPrepared onAlignedTextPreparedListener;
     public static final int REQUEST_IMAGE_CAPTURE = 1;
     public static final int REQUEST_WRITE_EXTERNAL_STORAGE = 2;
     public static final int REQUEST_READ_EXTERNAL_STORAGE = 3;
@@ -74,7 +70,7 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
-
+        setOnAlignedTextPreparedListener(this);
         binding.setHandler(new EventHandler() {
             @Override
             public void onAddReceipt() {
@@ -89,7 +85,6 @@ public class MainActivity extends AppCompatActivity
 //                binding.btnId.stopAnimation();
 
                 Bitmap photo = BitmapFactory.decodeResource(getResources(), R.drawable.simple);
-
                 Context context = getApplicationContext();
                 TextRecognizer ocrFrame = new TextRecognizer.Builder(context).build();
                 Frame frame = new Frame.Builder().setBitmap(photo).build();
@@ -99,16 +94,67 @@ public class MainActivity extends AppCompatActivity
                 SparseArray<TextBlock> textBlocks = ocrFrame.detect(frame);
                 List<TextBlock> textBlockList = new ArrayList<>();
                 for (int i = 0; i < textBlocks.size(); i++) {
-                    textBlockList.add(textBlocks.get(i));
-                }
-
-                for (int i = 0; i < textBlocks.size(); i++) {
                     TextBlock textBlock = textBlocks.get(textBlocks.keyAt(i));
-
-//                    Log.d(TAG, "onSync: "+ textBlock.getValue());
-//                    Log.e(TAG, "something is happening");
-                    System.out.println(i + "                        " + textBlock.getValue());
+                    textBlockList.add(textBlock);
+                    System.out.println(i + "       " + textBlock.getBoundingBox().top + "          " + textBlock.getValue());
                 }
+                Set<Integer> topBoundingValues = new HashSet<>();
+                for (TextBlock textBlock : textBlockList) {
+                    topBoundingValues.add(textBlock.getBoundingBox().top);
+                }
+                System.out.println(topBoundingValues);
+                List<Integer> sortedTopBoundingValues = new ArrayList<>(topBoundingValues);
+                Collections.sort(sortedTopBoundingValues);
+                System.out.println(sortedTopBoundingValues);
+                Map<Integer, List<TextBlock>> resultList = new HashMap<>();
+                for (Integer i : sortedTopBoundingValues) {
+                    System.out.println(i);
+                    List<TextBlock> values = new ArrayList<>();
+                    for (TextBlock textBlock : textBlockList) {
+                        if (textBlock.getBoundingBox().top == i) {
+                            values.add(textBlock);
+                        }
+                    }
+                    resultList.put(i, values);
+                }
+                TreeMap<Integer, List<TextBlock>> sorted = new TreeMap<>(resultList);
+                Map<Integer, String> finalMapText = new HashMap<>();
+                for (Map.Entry<Integer, List<TextBlock>> entry : sorted.entrySet()) {
+
+                    Collections.sort(entry.getValue(), new Comparator<TextBlock>() {
+                        @Override
+                        public int compare(TextBlock textBlock, TextBlock t1) {
+                            return textBlock.getBoundingBox().left - t1.getBoundingBox().left;
+                        }
+                    });
+                    String value = "";
+                    for (TextBlock s : entry.getValue()) {
+                        if (s.getComponents().size() > 1) {
+                            List<Text> texts = (List<Text>) s.getComponents();
+                            for (Text text : texts) {
+                                if (finalMapText.containsKey(text.getBoundingBox().top)) {
+                                    String temp = finalMapText.get(text.getBoundingBox().top);
+                                    finalMapText.put(text.getBoundingBox().top, temp + " " + text.getValue());
+                                } else {
+                                    finalMapText.put(text.getBoundingBox().top, text.getValue());
+                                }
+                            }
+                        } else {
+                            if (finalMapText.containsKey(s.getBoundingBox().top)) {
+                                String temp = finalMapText.get(s.getBoundingBox().top);
+                                finalMapText.put(s.getBoundingBox().top, temp + " " + s.getValue());
+                            } else {
+                                finalMapText.put(s.getBoundingBox().top, s.getValue());
+                            }
+                        }
+                    }
+                    System.out.println(value);
+                }
+                TreeMap<Integer, String> sorted2 = new TreeMap<>(finalMapText);
+                for (Map.Entry<Integer, String> entry : sorted2.entrySet()) {
+                    System.out.println(entry.getKey() + "   " + entry.getValue());
+                }
+
             }
         });
     }
@@ -221,34 +267,15 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onAlignedTextPrepared(Map<Long, List<String>> allBlocksAligned) {
-
-    }
-
-
-    class ForegroundCheckTask extends AsyncTask<Context, Void, Boolean> {
-
-        @Override
-        protected Boolean doInBackground(Context... params) {
-            final Context context = params[0].getApplicationContext();
-            return isAppOnForeground(context);
-        }
-
-        private boolean isAppOnForeground(Context context) {
-            ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-            List<ActivityManager.RunningAppProcessInfo> appProcesses = activityManager.getRunningAppProcesses();
-            if (appProcesses == null) {
-                return false;
-            }
-            final String packageName = context.getPackageName();
-            for (ActivityManager.RunningAppProcessInfo appProcess : appProcesses) {
-                if (appProcess.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND && appProcess.processName.equals(packageName)) {
-                    return true;
-                }
-            }
-            return false;
+        System.out.println("onAlignedTextPrepared");
+        for (Map.Entry<Long, List<String>> entry : allBlocksAligned.entrySet()) {
+            System.out.println("Key : " + entry.getKey());
+            String value = "";
+            for (String s : entry.getValue())
+                value += s + " ";
+            System.out.println("Value : " + value);
         }
     }
-
 
     private void logAlignedBlocks(List<TextBlock> items) {
         Log.d(TAG, "logAlignedBlocks: *************************************");
@@ -282,9 +309,6 @@ public class MainActivity extends AppCompatActivity
                     }
                     if (!alignedItems.contains(innerItem.getValue()))
                         alignedItems.add(innerItem.getValue());
-                    for (String s : alignedItems) {
-                        System.out.print(s + " ");
-                    }
                 }
             }
 
@@ -294,9 +318,43 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    public interface OnAlignedTextPrepared {
-        // Passes you a map where each item containing a list of all items on the same horizontal line.
-        void onAlignedTextPrepared(Map<Long, List<String>> allBlocksAligned);
+    public OnAlignedTextPrepared getOnAlignedTextPreparedListener() {
+        return onAlignedTextPreparedListener;
     }
+
+    public void setOnAlignedTextPreparedListener(OnAlignedTextPrepared onAlignedTextPreparedListener) {
+        this.onAlignedTextPreparedListener = onAlignedTextPreparedListener;
+    }
+
+
+    public List<String> getStrings(String s) {
+        String[] items = s.split("\n");
+        List<String> itemList = new ArrayList<String>();
+        for (String item : items) {
+            itemList.add(item);
+        }
+        return itemList;
+    }
+
+
+    public String getValue(List<List<String>> bigList) {
+
+        List<String> resultList = new ArrayList<>();
+        String result = "";
+        for (int i = 0; i < bigList.size(); i++) {
+            String value = "";
+            for (String s : bigList.get(i)) {
+                value += bigList.get(i).get(i);
+            }
+            result += value + "\n";
+        }
+
+        return result;
+    }
+
 }
 
+interface OnAlignedTextPrepared {
+    // Passes you a map where each item containing a list of all items on the same horizontal line.
+    void onAlignedTextPrepared(Map<Long, List<String>> allBlocksAligned);
+}

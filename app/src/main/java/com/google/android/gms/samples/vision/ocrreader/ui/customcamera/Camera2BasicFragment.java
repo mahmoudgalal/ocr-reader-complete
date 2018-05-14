@@ -66,11 +66,8 @@ import com.google.android.gms.samples.vision.ocrreader.api.ApiService;
 import com.google.android.gms.samples.vision.ocrreader.api.AppRetrofitManager;
 import com.google.android.gms.samples.vision.ocrreader.exception.ErrorRequestException;
 import com.google.android.gms.samples.vision.ocrreader.model.Receipt;
-import com.google.android.gms.samples.vision.ocrreader.model.Receipt_Table;
 import com.google.android.gms.samples.vision.ocrreader.model.UploadResponse;
 import com.google.android.gms.samples.vision.ocrreader.ui.OcrCaptureActivity;
-import com.raizlabs.android.dbflow.sql.language.Method;
-import com.raizlabs.android.dbflow.sql.language.SQLite;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -894,12 +891,12 @@ public class Camera2BasicFragment extends Fragment
                     mReceipt.setUUID(serialId);
                     mReceipt.save();
 
-                    Receipt receipt = SQLite.select()
-                            .from(Receipt.class)
-                            .where(Receipt_Table.UUID.eq(serialId))
-                            .querySingle();
+//                    Receipt receipt = SQLite.select()
+//                            .from(Receipt.class)
+//                            .where(Receipt_Table.UUID.eq(serialId))
+//                            .querySingle();
 
-                    Log.d(TAG,receipt.getImageUrl());
+//                    Log.d(TAG,receipt.getImageUrl());
                     /*
                      ** end **
                      */
