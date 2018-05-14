@@ -51,12 +51,15 @@ import java.util.concurrent.ExecutionException;
 
 import br.com.simplepass.loading_button_lib.Utils;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity
+        implements MainActivity.OnAlignedTextPrepared {
 
     public OcrDetectorProcessor.OnAlignedTextPrepared onAlignedTextPreparedListener;
     public static final int REQUEST_IMAGE_CAPTURE = 1;
     public static final int REQUEST_WRITE_EXTERNAL_STORAGE = 2;
     public static final int REQUEST_READ_EXTERNAL_STORAGE = 3;
+
+
     private static final String TAG = MainActivity.class.getName();
     String mCurrentPhotoPath;
 
@@ -95,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 SparseArray<TextBlock> textBlocks = ocrFrame.detect(frame);
                 List<TextBlock> textBlockList = new ArrayList<>();
-                for(int i = 0; i< textBlocks.size() ; i++){
+                for (int i = 0; i < textBlocks.size(); i++) {
                     textBlockList.add(textBlocks.get(i));
                 }
 
@@ -104,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
 
 //                    Log.d(TAG, "onSync: "+ textBlock.getValue());
 //                    Log.e(TAG, "something is happening");
-                    System.out.println(i+"                        "+textBlock.getValue());
+                    System.out.println(i + "                        " + textBlock.getValue());
                 }
             }
         });
@@ -216,6 +219,11 @@ public class MainActivity extends AppCompatActivity {
         return image;
     }
 
+    @Override
+    public void onAlignedTextPrepared(Map<Long, List<String>> allBlocksAligned) {
+
+    }
+
 
     class ForegroundCheckTask extends AsyncTask<Context, Void, Boolean> {
 
@@ -263,7 +271,6 @@ public class MainActivity extends AppCompatActivity {
 
             for (int j = i + 1; j < sortedBlocks.size(); ++j) {
                 TextBlock innerItem = sortedBlocks.get(j);
-//                System.out.println(innerItem.getValue());
                 if (Math.abs(item.getBoundingBox().top - innerItem.getBoundingBox().top) < 8) {
                     //we found almost aligned items
                     id = item.getBoundingBox().top;//Identify by Y coordinate
@@ -275,10 +282,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                     if (!alignedItems.contains(innerItem.getValue()))
                         alignedItems.add(innerItem.getValue());
-
-                    System.out.println("*****************");
-                    for(String s : alignedItems){
-                        System.out.print(s +" ");
+                    for (String s : alignedItems) {
+                        System.out.print(s + " ");
                     }
                 }
             }
@@ -292,10 +297,6 @@ public class MainActivity extends AppCompatActivity {
     public interface OnAlignedTextPrepared {
         // Passes you a map where each item containing a list of all items on the same horizontal line.
         void onAlignedTextPrepared(Map<Long, List<String>> allBlocksAligned);
-    }
-
-    public void setOnAlignedTextPreparedListener(OcrDetectorProcessor.OnAlignedTextPrepared onAlignedTextPreparedListener) {
-        this.onAlignedTextPreparedListener = onAlignedTextPreparedListener;
     }
 }
 
