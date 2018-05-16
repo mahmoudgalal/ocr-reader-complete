@@ -22,9 +22,10 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
@@ -62,12 +63,7 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import com.google.android.gms.samples.vision.ocrreader.R;
-import com.google.android.gms.samples.vision.ocrreader.api.ApiService;
-import com.google.android.gms.samples.vision.ocrreader.api.AppRetrofitManager;
-import com.google.android.gms.samples.vision.ocrreader.exception.ErrorRequestException;
-import com.google.android.gms.samples.vision.ocrreader.model.Receipt;
-import com.google.android.gms.samples.vision.ocrreader.model.UploadResponse;
-import com.google.android.gms.samples.vision.ocrreader.ui.OcrCaptureActivity;
+import com.google.android.gms.samples.vision.ocrreader.ocr.OcrFromImage;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -80,14 +76,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-
-import okhttp3.MediaType;
-import okhttp3.MultipartBody;
-import okhttp3.RequestBody;
-import retrofit2.Call;
 
 public class Camera2BasicFragment extends Fragment
         implements View.OnClickListener, ActivityCompat.OnRequestPermissionsResultCallback {
@@ -862,11 +852,18 @@ public class Camera2BasicFragment extends Fragment
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session,
                                                @NonNull CaptureRequest request,
                                                @NonNull TotalCaptureResult result) {
+                    Bitmap photo = BitmapFactory.decodeFile(mCurrentPhotoPath);
+                    System.out.println("**********************************");
+                    System.out.println(OcrFromImage.getInstance().getTextFromImage(getContext(),photo));
+                    System.out.println("**********************************");
+
                     /*
                     ** start **
                     this part to create record of receipt in database
                      */
 //start upload
+
+                    /*
                     ApiService mApiService = AppRetrofitManager.getApiService();
 
                     // this part to create image file from imageUrl
@@ -890,7 +887,7 @@ public class Camera2BasicFragment extends Fragment
                     String serialId = UUID.randomUUID().toString();
                     mReceipt.setUUID(serialId);
                     mReceipt.save();
-
+*/
 //                    Receipt receipt = SQLite.select()
 //                            .from(Receipt.class)
 //                            .where(Receipt_Table.UUID.eq(serialId))
@@ -902,14 +899,14 @@ public class Camera2BasicFragment extends Fragment
                      */
 
 
-                    Log.d(TAG, mFile.toString());
+             /*       Log.d(TAG, mFile.toString());
 //                  closeCamera();
                     mCameraDevice.close();
                     Intent intent = new Intent(getActivity(), OcrCaptureActivity.class);
-                    intent.putExtra("uuid",serialId);
+                    intent.putExtra("uuid", serialId);
                     getContext().startActivity(intent);
                     getActivity().finish();
-
+*/
 //                    unlockFocus();
                 }
             };
