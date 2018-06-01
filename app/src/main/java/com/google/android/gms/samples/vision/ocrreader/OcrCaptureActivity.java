@@ -28,6 +28,7 @@ import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.speech.tts.TextToSpeech;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -38,6 +39,9 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.widget.CompoundButton;
+import android.widget.ProgressBar;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -50,7 +54,11 @@ import com.google.android.gms.samples.vision.ocrreader.ui.camera.GraphicOverlay;
 import com.google.android.gms.vision.text.TextBlock;
 import com.google.android.gms.vision.text.TextRecognizer;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -60,7 +68,7 @@ import java.util.Map;
  * rear facing camera. During detection overlay graphics are drawn to indicate the position,
  * size, and contents of each TextBlock.
  */
-public final class OcrCaptureActivity extends AppCompatActivity implements OcrDetectorProcessor.OnAlignedTextPrepared {
+public final class OcrCaptureActivity extends AppCompatActivity implements OcrDetectorProcessor.OnAlignedTextPrepared ,CameraSource.ShutterCallback,CameraSource.PictureCallback {
     private static final String TAG = "OcrCaptureActivity";
 
     // Intent request code to handle updating play services if needed.
@@ -77,6 +85,7 @@ public final class OcrCaptureActivity extends AppCompatActivity implements OcrDe
     private CameraSource mCameraSource;
     private CameraSourcePreview mPreview;
     private GraphicOverlay<OcrGraphic> mGraphicOverlay;
+    private Switch captureModeSwitch;
 
     // Helper objects for detecting taps and pinches.
     private ScaleGestureDetector scaleGestureDetector;
@@ -85,6 +94,10 @@ public final class OcrCaptureActivity extends AppCompatActivity implements OcrDe
     // A TextToSpeech engine for speaking a String value.
     private TextToSpeech tts;
     private TextView windowView;
+    private boolean isTakePictureModeAllowed = false;
+    private ProgressBar progressBar;
+
+
 
     /**
      * Initializes the UI and creates the detector pipeline.
@@ -97,7 +110,15 @@ public final class OcrCaptureActivity extends AppCompatActivity implements OcrDe
 
         mPreview = (CameraSourcePreview) findViewById(R.id.preview);
         mGraphicOverlay = (GraphicOverlay<OcrGraphic>) findViewById(R.id.graphicOverlay);
-
+        progressBar = (ProgressBar) findViewById(R.id.pic_progress);
+        captureModeSwitch = (Switch) findViewById(R.id.capture_mode_switch);
+        captureModeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                setTakePictureModeAllowed(b);
+            }
+        });
+        setTakePictureModeAllowed(true);
         // Set good defaults for capturing text.
         boolean autoFocus = true;
         boolean useFlash = false;
@@ -309,7 +330,7 @@ public final class OcrCaptureActivity extends AppCompatActivity implements OcrDe
         };
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Multitracker sample")
+        builder.setTitle("Proffix Scanner")
                 .setMessage(R.string.no_camera_permission)
                 .setPositiveButton(R.string.ok, listener)
                 .show();
@@ -374,11 +395,69 @@ public final class OcrCaptureActivity extends AppCompatActivity implements OcrDe
         Log.d(TAG, "Map : "+ allBlocksAligned.toString());
     }
 
+    @Override
+    public void onShutter() {
+        //play shutter sound here
+        Log.d(TAG,"onShutter called...");
+    }
+
+    @Override
+    public void onPictureTaken(byte[] data) {
+            Log.d(TAG,"Photo was taken ,size = "+data.length);
+        boolean ret = saveTakenPictureToDisk(data);
+        Toast.makeText(this,ret?"Saving photo Succeeded":"Error Saving taken photo !",Toast.LENGTH_LONG).show();
+        captureModeSwitch.setChecked(false);
+        setTakePictureModeAllowed(false);
+        progressBar.setVisibility(View.INVISIBLE);
+    }
+
+    /**
+     * Saves the supplied data to a local file as a jpeg file.
+     * @param data
+     * @return
+     */
+    private boolean saveTakenPictureToDisk(byte[] data){
+        File outFile =  createPictureFile(this);
+        FileOutputStream output = null;
+        boolean ret = false;
+        try {
+            output = new FileOutputStream(outFile);
+            output.write(data);
+            ret = true;
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (null != output) {
+                try {
+                    output.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return  ret;
+    }
+
+    private File createPictureFile(Context context){
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + ".jpg";
+        File  file = new File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), imageFileName);
+        return file;
+    }
+
+
     private class CaptureGestureListener extends GestureDetector.SimpleOnGestureListener {
 
         @Override
         public boolean onSingleTapConfirmed(MotionEvent e) {
-            return onTap(e.getRawX(), e.getRawY()) || super.onSingleTapConfirmed(e);
+            Log.d(TAG,"On screen taped...");
+            if(isTakePictureModeAllowed){
+                //Take picture
+                mCameraSource.takePicture(OcrCaptureActivity.this,OcrCaptureActivity.this);
+                progressBar.setVisibility(View.VISIBLE);
+                return  true;
+            }else
+                return onTap(e.getRawX(), e.getRawY()) || super.onSingleTapConfirmed(e);
         }
     }
 
@@ -436,5 +515,15 @@ public final class OcrCaptureActivity extends AppCompatActivity implements OcrDe
                 mCameraSource.doZoom(detector.getScaleFactor());
             }
         }
+    }
+
+
+    public boolean isTakePictureModeAllowed() {
+        return isTakePictureModeAllowed;
+    }
+
+    public void setTakePictureModeAllowed(boolean takePictureModeAllowed) {
+        isTakePictureModeAllowed = takePictureModeAllowed;
+        mGraphicOverlay.setVisibility(takePictureModeAllowed?View.INVISIBLE:View.VISIBLE);
     }
 }
