@@ -377,7 +377,8 @@ public final class OcrCaptureActivity extends AppCompatActivity implements OcrDe
             if (text != null && text.getValue() != null) {
                 Log.d(TAG, "text data is being spoken! " + text.getValue());
                 // Speak the string.
-                tts.speak(text.getValue(), TextToSpeech.QUEUE_ADD, null, "DEFAULT");
+                //tts.speak(text.getValue(), TextToSpeech.QUEUE_ADD, null, "DEFAULT");
+                showAlertDialog(getDigitsOnlyFromText(text.getValue()));
             }
             else {
                 Log.d(TAG, "text data is null");
@@ -387,6 +388,32 @@ public final class OcrCaptureActivity extends AppCompatActivity implements OcrDe
             Log.d(TAG,"no text detected");
         }
         return text != null;
+    }
+
+    private String getDigitsOnlyFromText(String value) {
+
+        String numberOnly= value.replaceAll("[a-zA-Z]", "");
+
+        if(numberOnly.startsWith(".")){
+            numberOnly = numberOnly.substring(1, numberOnly.length());
+        }else if(numberOnly.endsWith(".")){
+            numberOnly = numberOnly.substring(0, numberOnly.length()-1);
+        }
+        return numberOnly;
+    }
+
+    private void showAlertDialog(String value) {
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage("Total Amount: \n " + value)
+              .setCancelable(false)
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        //do things
+                    }
+                });
+        AlertDialog alert = builder.create();
+        alert.show();
     }
 
     @Override
